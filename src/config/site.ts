@@ -46,6 +46,7 @@ export const ROUTES = {
   forgotPassword: "/forgot-password",
   verify: "/verify",
   explore: "/explore",
+  tips: "/explore?day=today",
   leaderboard: "/leaderboard",
   search: "/search",
   pricing: "/pricing",

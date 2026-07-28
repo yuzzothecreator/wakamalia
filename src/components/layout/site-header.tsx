@@ -11,7 +11,7 @@ import { ROUTES } from "@/config/site"
 import { cn } from "@/lib/utils"
 
 const navLinks = [
-  { href: ROUTES.explore, label: "Explore" },
+  { href: ROUTES.explore, label: "Today's tips" },
   { href: ROUTES.leaderboard, label: "Leaderboard" },
   { href: ROUTES.pricing, label: "Pricing" },
   { href: ROUTES.blog, label: "Blog" },

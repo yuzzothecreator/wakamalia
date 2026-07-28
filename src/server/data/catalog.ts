@@ -19,6 +19,7 @@ export async function listPredictions(input?: {
   sport?: string
   visibility?: string
   tipsterId?: string
+  day?: "today" | "yesterday" | "week" | "all"
   page?: number
   limit?: number
 }): Promise<{
@@ -30,8 +31,25 @@ export async function listPredictions(input?: {
 }> {
   const page = input?.page ?? 1
   const limit = input?.limit ?? 20
+  const day = input?.day ?? "all"
 
   try {
+    const dateFilter = buildDayFilter(day)
+    const andFilters: Record<string, unknown>[] = []
+
+    if (dateFilter) {
+      andFilters.push({ OR: dateFilter })
+    }
+    if (input?.q) {
+      andFilters.push({
+        OR: [
+          { title: { contains: input.q, mode: "insensitive" as const } },
+          { match: { contains: input.q, mode: "insensitive" as const } },
+          { league: { contains: input.q, mode: "insensitive" as const } },
+        ],
+      })
+    }
+
     const where = {
       status: { not: "DRAFT" as const },
       ...(input?.tipsterId ? { tipsterId: input.tipsterId } : {}),
@@ -41,36 +59,26 @@ export async function listPredictions(input?: {
       ...(input?.visibility && input.visibility !== "ALL"
         ? { visibility: input.visibility as never }
         : {}),
-      ...(input?.q
-        ? {
-            OR: [
-              { title: { contains: input.q, mode: "insensitive" as const } },
-              { match: { contains: input.q, mode: "insensitive" as const } },
-              { league: { contains: input.q, mode: "insensitive" as const } },
-            ],
-          }
-        : {}),
+      ...(andFilters.length ? { AND: andFilters } : {}),
     }
 
     const [items, total] = await Promise.all([
       prisma.prediction.findMany({
         where,
         include: predictionInclude,
-        orderBy: { publishedAt: "desc" },
+        orderBy: [{ publishedAt: "desc" }, { kickoffTime: "asc" }],
         skip: (page - 1) * limit,
         take: limit,
       }),
       prisma.prediction.count({ where }),
     ])
 
-    if (items.length > 0 || total > 0) {
-      return {
-        items: items.map((p) => toPredictionCard(p)),
-        total,
-        page,
-        limit,
-        totalPages: Math.ceil(total / limit) || 1,
-      }
+    return {
+      items: items.map((p) => toPredictionCard(p)),
+      total,
+      page,
+      limit,
+      totalPages: Math.ceil(total / limit) || 1,
     }
   } catch {
     /* fall through to demo */
@@ -86,6 +94,20 @@ export async function listPredictions(input?: {
         (p.league?.toLowerCase().includes(q) ?? false)
     )
   }
+  if (input?.sport && input.sport !== "ALL") {
+    items = items.filter((p) => p.sport === input.sport)
+  }
+  if (day === "today" || day === "yesterday") {
+    const { start, end } = getDayBounds(day)
+    items = items.filter((p) => {
+      const published = p.publishedAt ? new Date(p.publishedAt) : null
+      const kickoff = new Date(p.kickoffTime)
+      return (
+        (published != null && published >= start && published < end) ||
+        (kickoff >= start && kickoff < end)
+      )
+    })
+  }
 
   return {
     items,
@@ -94,6 +116,37 @@ export async function listPredictions(input?: {
     limit,
     totalPages: 1,
   }
+}
+
+function getDayBounds(day: "today" | "yesterday") {
+  const start = new Date()
+  start.setHours(0, 0, 0, 0)
+  if (day === "yesterday") {
+    start.setDate(start.getDate() - 1)
+  }
+  const end = new Date(start)
+  end.setDate(end.getDate() + 1)
+  return { start, end }
+}
+
+function buildDayFilter(day: "today" | "yesterday" | "week" | "all") {
+  if (day === "all") return null
+
+  if (day === "week") {
+    const start = new Date()
+    start.setHours(0, 0, 0, 0)
+    start.setDate(start.getDate() - 6)
+    return [
+      { publishedAt: { gte: start } },
+      { kickoffTime: { gte: start } },
+    ]
+  }
+
+  const { start, end } = getDayBounds(day)
+  return [
+    { publishedAt: { gte: start, lt: end } },
+    { kickoffTime: { gte: start, lt: end } },
+  ]
 }
 
 export async function getPredictionById(

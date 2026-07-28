@@ -7,6 +7,7 @@ import {
   Bell,
   ChevronLeft,
   ChevronRight,
+  Compass,
   LayoutDashboard,
   MessageSquare,
   PlusCircle,
@@ -25,6 +26,7 @@ import { useUIStore } from "@/store/ui-store"
 
 const mainNav = [
   { href: ROUTES.dashboard.tipster, label: "Overview", icon: LayoutDashboard },
+  { href: ROUTES.tips, label: "Today's tips", icon: Compass },
   { href: ROUTES.dashboard.create, label: "New prediction", icon: PlusCircle },
   { href: ROUTES.dashboard.analytics, label: "Analytics", icon: BarChart3 },
   { href: ROUTES.dashboard.subscribers, label: "Subscribers", icon: Users },
@@ -53,9 +55,12 @@ export function DashboardSidebar() {
     label: string
     icon: React.ComponentType<{ className?: string }>
   }) => {
+    const pathOnly = href.split("?")[0]
     const active =
-      pathname === href ||
-      (href !== ROUTES.dashboard.tipster && pathname.startsWith(href))
+      pathname === pathOnly ||
+      (pathOnly !== ROUTES.dashboard.tipster &&
+        pathOnly !== "/" &&
+        pathname.startsWith(pathOnly))
 
     return (
       <Link
