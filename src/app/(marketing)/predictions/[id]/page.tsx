@@ -1,6 +1,7 @@
 import Link from "next/link"
+import Image from "next/image"
 import { notFound } from "next/navigation"
-import { BadgeCheck, Clock, Heart, MessageCircle, Share2 } from "lucide-react"
+import { BadgeCheck, Clock, Heart, MessageCircle, Share2, Ticket } from "lucide-react"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
@@ -35,12 +36,20 @@ export default async function PredictionDetailPage({ params }: PageProps) {
   const username = prediction.tipster.profile?.username ?? "tipster"
   const locked =
     prediction.visibility === "PREMIUM" && !prediction.isUnlocked
+  const screenshot = prediction.images?.[0]
+  const isQuickPost = Boolean(prediction.bookingCode || screenshot)
 
   return (
     <div className="mx-auto max-w-4xl px-4 py-10 sm:px-6 lg:px-8">
       <div className="mb-6 flex flex-wrap items-center gap-2">
         <Badge variant="secondary">{prediction.sport.replace("_", " ")}</Badge>
         {prediction.league && <Badge variant="outline">{prediction.league}</Badge>}
+        {prediction.bookingCode && (
+          <Badge variant="outline" className="font-mono">
+            <Ticket className="mr-1 size-3" />
+            {prediction.bookingCode}
+          </Badge>
+        )}
         <Badge
           variant={
             prediction.status === "WON"
@@ -60,21 +69,27 @@ export default async function PredictionDetailPage({ params }: PageProps) {
       <h1 className="text-3xl font-bold tracking-tight text-balance">
         {prediction.title}
       </h1>
-      <p className="mt-2 text-lg text-muted-foreground">
-        {prediction.homeTeam} vs {prediction.awayTeam}
-      </p>
+      {!isQuickPost && (
+        <p className="mt-2 text-lg text-muted-foreground">
+          {prediction.homeTeam} vs {prediction.awayTeam}
+        </p>
+      )}
 
-      <div className="mt-4 flex items-center gap-2 text-sm text-muted-foreground">
-        <Clock className="size-4" />
-        Kickoff:{" "}
-        <CountdownDisplay kickoff={prediction.kickoffTime} />
-      </div>
+      {!isQuickPost && (
+        <div className="mt-4 flex items-center gap-2 text-sm text-muted-foreground">
+          <Clock className="size-4" />
+          Kickoff:{" "}
+          <CountdownDisplay kickoff={prediction.kickoffTime} />
+        </div>
+      )}
 
       <Card className="mt-8">
         <CardHeader>
-          <CardTitle className="text-base">Prediction slip</CardTitle>
+          <CardTitle className="text-base">
+            {isQuickPost ? "Bet slip" : "Prediction slip"}
+          </CardTitle>
         </CardHeader>
-        <CardContent>
+        <CardContent className="space-y-6">
           {locked ? (
             <div className="rounded-xl bg-secondary/60 p-8 text-center">
               <p className="font-medium">Premium content locked</p>
@@ -84,22 +99,52 @@ export default async function PredictionDetailPage({ params }: PageProps) {
               <Button className="mt-4">Unlock prediction</Button>
             </div>
           ) : (
-            <div className="grid gap-4 sm:grid-cols-3">
-              <div>
-                <p className="text-xs uppercase text-muted-foreground">Pick</p>
-                <p className="text-lg font-semibold">{prediction.prediction}</p>
-              </div>
-              <div>
-                <p className="text-xs uppercase text-muted-foreground">Odds</p>
-                <p className="font-mono text-lg font-bold">
-                  {prediction.odds.toFixed(2)}
-                </p>
-              </div>
-              <div>
-                <p className="text-xs uppercase text-muted-foreground">Confidence</p>
-                <p className="text-lg font-semibold">{prediction.confidence}/10</p>
-              </div>
-            </div>
+            <>
+              {prediction.bookingCode && (
+                <div className="rounded-xl border border-border bg-secondary/40 p-5">
+                  <p className="text-xs uppercase tracking-wide text-muted-foreground">
+                    Booking code
+                  </p>
+                  <p className="mt-1 font-mono text-2xl font-bold tracking-wider">
+                    {prediction.bookingCode}
+                  </p>
+                  <p className="mt-2 text-sm text-muted-foreground">
+                    Load this code in your bookmaker app to copy the slip.
+                  </p>
+                </div>
+              )}
+
+              {screenshot && (
+                <div className="relative aspect-[4/3] overflow-hidden rounded-xl border border-border bg-secondary/40">
+                  <Image
+                    src={screenshot.url}
+                    alt={screenshot.alt ?? "Bet slip screenshot"}
+                    fill
+                    unoptimized
+                    className="object-contain"
+                  />
+                </div>
+              )}
+
+              {!isQuickPost && (
+                <div className="grid gap-4 sm:grid-cols-3">
+                  <div>
+                    <p className="text-xs uppercase text-muted-foreground">Pick</p>
+                    <p className="text-lg font-semibold">{prediction.prediction}</p>
+                  </div>
+                  <div>
+                    <p className="text-xs uppercase text-muted-foreground">Odds</p>
+                    <p className="font-mono text-lg font-bold">
+                      {prediction.odds.toFixed(2)}
+                    </p>
+                  </div>
+                  <div>
+                    <p className="text-xs uppercase text-muted-foreground">Confidence</p>
+                    <p className="text-lg font-semibold">{prediction.confidence}/10</p>
+                  </div>
+                </div>
+              )}
+            </>
           )}
         </CardContent>
       </Card>

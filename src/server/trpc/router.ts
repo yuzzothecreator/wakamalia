@@ -105,6 +105,7 @@ export const predictionsRouter = createTRPCRouter({
           odds: input.odds,
           confidence: input.confidence,
           bookmaker: input.bookmaker,
+          bookingCode: input.bookingCode,
           analysis: input.analysis,
           tags: input.tags ?? [],
           visibility: input.visibility,

@@ -11,6 +11,7 @@ const predictionInclude = {
   tipster: {
     include: { profile: true, tipster: true },
   },
+  images: true,
 } as const
 
 export async function listPredictions(input?: {

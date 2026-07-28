@@ -1,9 +1,13 @@
 "use server"
 
 import { revalidatePath } from "next/cache"
-import { predictionSchema } from "@/lib/validations"
+import {
+  predictionSchema,
+  quickPredictionSchema,
+} from "@/lib/validations"
 import { getSession } from "@/lib/session"
 import { prisma } from "@/server/db"
+import { savePredictionScreenshot } from "@/server/uploads"
 import type { ApiResponse } from "@/types"
 import type { z } from "zod"
 
@@ -39,6 +43,7 @@ export async function createPredictionAction(
         odds: data.odds,
         confidence: data.confidence,
         bookmaker: data.bookmaker,
+        bookingCode: data.bookingCode,
         analysis: data.analysis,
         tags: data.tags ?? [],
         visibility: data.visibility,
@@ -47,6 +52,11 @@ export async function createPredictionAction(
         publishedAt: data.scheduledAt ? null : new Date(),
         scheduledAt: data.scheduledAt ? new Date(data.scheduledAt) : null,
       },
+    })
+
+    await prisma.tipster.updateMany({
+      where: { userId: session.user.id },
+      data: { totalPredictions: { increment: 1 } },
     })
 
     revalidatePath("/dashboard")
@@ -58,6 +68,89 @@ export async function createPredictionAction(
     return {
       success: false,
       error: "Failed to create prediction. Check your database connection.",
+    }
+  }
+}
+
+export async function createQuickPredictionAction(
+  formData: FormData
+): Promise<ApiResponse<{ id: string }>> {
+  const session = await getSession()
+  if (!session?.user) {
+    return { success: false, error: "Unauthorized" }
+  }
+
+  const parsed = quickPredictionSchema.safeParse({
+    bookingCode: formData.get("bookingCode"),
+    sport: formData.get("sport") || "FOOTBALL",
+    visibility: formData.get("visibility") || "FREE",
+    price: formData.get("price") || undefined,
+    note: formData.get("note") || undefined,
+  })
+
+  if (!parsed.success) {
+    return { success: false, error: parsed.error.issues[0]?.message ?? "Invalid input" }
+  }
+
+  const screenshot = formData.get("screenshot")
+  if (!(screenshot instanceof File) || screenshot.size === 0) {
+    return { success: false, error: "Add a bet slip screenshot" }
+  }
+
+  const uploaded = await savePredictionScreenshot(screenshot)
+  if ("error" in uploaded) {
+    return { success: false, error: uploaded.error }
+  }
+
+  const data = parsed.data
+  const code = data.bookingCode.trim().toUpperCase()
+  const title = `Booking code ${code}`
+
+  try {
+    const prediction = await prisma.prediction.create({
+      data: {
+        tipsterId: session.user.id,
+        title,
+        sport: data.sport,
+        match: `Booking code ${code}`,
+        homeTeam: "See slip",
+        awayTeam: "See slip",
+        kickoffTime: new Date(Date.now() + 36e5 * 24),
+        prediction: code,
+        odds: 1.01,
+        confidence: 5,
+        bookingCode: code,
+        analysis: data.note?.trim() || null,
+        tags: ["quick-post", "booking-code"],
+        visibility: data.visibility,
+        price: data.visibility === "PREMIUM" ? data.price ?? 0 : 0,
+        status: "PENDING",
+        publishedAt: new Date(),
+        images: {
+          create: {
+            url: uploaded.url,
+            publicId: uploaded.publicId,
+            alt: `Bet slip screenshot for ${code}`,
+          },
+        },
+      },
+    })
+
+    await prisma.tipster.updateMany({
+      where: { userId: session.user.id },
+      data: { totalPredictions: { increment: 1 } },
+    })
+
+    revalidatePath("/dashboard")
+    revalidatePath("/explore")
+    revalidatePath(`/predictions/${prediction.id}`)
+
+    return { success: true, data: { id: prediction.id }, message: "Quick pick published" }
+  } catch (error) {
+    console.error("[createQuickPredictionAction]", error)
+    return {
+      success: false,
+      error: "Failed to publish. Check your database connection.",
     }
   }
 }
@@ -77,7 +170,7 @@ export async function deletePredictionAction(
     revalidatePath("/dashboard")
     return { success: true }
   } catch {
-    return { success: true, message: "Deleted (demo mode)" }
+    return { success: false, error: "Failed to delete prediction" }
   }
 }
 
@@ -98,6 +191,6 @@ export async function publishPredictionAction(
     revalidatePath("/explore")
     return { success: true }
   } catch {
-    return { success: true, message: "Published (demo mode)" }
+    return { success: false, error: "Failed to publish prediction" }
   }
 }

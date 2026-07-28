@@ -54,6 +54,8 @@ type PredictionLike = {
   likesCount: number
   commentsCount: number
   publishedAt?: Date | null
+  bookingCode?: string | null
+  images?: { id?: string; url: string; alt?: string | null }[]
   tipster: UserLike
 }
 
@@ -125,6 +127,12 @@ export function toPredictionCard(
     likesCount: prediction.likesCount,
     commentsCount: prediction.commentsCount,
     publishedAt: prediction.publishedAt,
+    bookingCode: prediction.bookingCode ?? null,
+    images: prediction.images?.map((img) => ({
+      id: img.id,
+      url: img.url,
+      alt: img.alt,
+    })),
     tipster: toUserPublic(prediction.tipster),
     isUnlocked: options?.isUnlocked,
   }

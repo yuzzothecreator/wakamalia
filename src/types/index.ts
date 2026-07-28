@@ -71,6 +71,8 @@ export interface PredictionCard {
   likesCount: number
   commentsCount: number
   publishedAt?: string | Date | null
+  bookingCode?: string | null
+  images?: { id?: string; url: string; alt?: string | null }[]
   tipster: UserPublic
   isLiked?: boolean
   isBookmarked?: boolean

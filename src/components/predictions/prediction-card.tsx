@@ -1,5 +1,6 @@
 import Link from "next/link"
-import { BadgeCheck, Lock } from "lucide-react"
+import Image from "next/image"
+import { BadgeCheck, Lock, Ticket } from "lucide-react"
 import { Badge } from "@/components/ui/badge"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { cn, formatCurrency, getInitials } from "@/lib/utils"
@@ -14,6 +15,8 @@ export function PredictionCard({ prediction, className }: PredictionCardProps) {
   const username = prediction.tipster.profile?.username ?? "tipster"
   const locked =
     prediction.visibility === "PREMIUM" && !prediction.isUnlocked
+  const screenshot = prediction.images?.[0]
+  const isQuickPost = Boolean(prediction.bookingCode || screenshot)
 
   return (
     <article
@@ -70,43 +73,78 @@ export function PredictionCard({ prediction, className }: PredictionCardProps) {
         <h3 className="text-base font-semibold tracking-tight text-balance group-hover:text-primary">
           {prediction.title}
         </h3>
-        <p className="text-sm text-muted-foreground">
-          {prediction.homeTeam} vs {prediction.awayTeam}
-        </p>
+        {!isQuickPost && (
+          <p className="text-sm text-muted-foreground">
+            {prediction.homeTeam} vs {prediction.awayTeam}
+          </p>
+        )}
 
-        <div className="relative mt-3 overflow-hidden rounded-xl bg-secondary/60 p-4">
-          {locked ? (
-            <div className="flex flex-col items-center gap-2 py-4 text-center">
-              <Lock className="size-5 text-muted-foreground" />
-              <p className="text-sm font-medium">Premium prediction locked</p>
-              <p className="text-xs text-muted-foreground">
-                Unlock for {formatCurrency(prediction.price)}
-              </p>
-            </div>
-          ) : (
-            <div className="flex items-center justify-between gap-4">
-              <div>
-                <p className="text-xs uppercase tracking-wide text-muted-foreground">
-                  Pick
+        {screenshot && !locked ? (
+          <div className="relative mt-3 aspect-[16/10] overflow-hidden rounded-xl bg-secondary/60">
+            <Image
+              src={screenshot.url}
+              alt={screenshot.alt ?? "Bet slip screenshot"}
+              fill
+              unoptimized
+              className="object-cover"
+            />
+          </div>
+        ) : (
+          <div className="relative mt-3 overflow-hidden rounded-xl bg-secondary/60 p-4">
+            {locked ? (
+              <div className="flex flex-col items-center gap-2 py-4 text-center">
+                <Lock className="size-5 text-muted-foreground" />
+                <p className="text-sm font-medium">Premium prediction locked</p>
+                <p className="text-xs text-muted-foreground">
+                  Unlock for {formatCurrency(prediction.price)}
                 </p>
-                <p className="font-semibold">{prediction.prediction}</p>
               </div>
-              <div className="text-right">
-                <p className="text-xs uppercase tracking-wide text-muted-foreground">
-                  Odds
-                </p>
-                <p className="font-mono text-lg font-bold">{prediction.odds.toFixed(2)}</p>
+            ) : prediction.bookingCode ? (
+              <div className="flex items-center justify-between gap-4">
+                <div>
+                  <p className="text-xs uppercase tracking-wide text-muted-foreground">
+                    Booking code
+                  </p>
+                  <p className="flex items-center gap-2 font-mono text-lg font-bold tracking-wide">
+                    <Ticket className="size-4 text-primary" />
+                    {prediction.bookingCode}
+                  </p>
+                </div>
               </div>
-            </div>
-          )}
-        </div>
+            ) : (
+              <div className="flex items-center justify-between gap-4">
+                <div>
+                  <p className="text-xs uppercase tracking-wide text-muted-foreground">
+                    Pick
+                  </p>
+                  <p className="font-semibold">{prediction.prediction}</p>
+                </div>
+                <div className="text-right">
+                  <p className="text-xs uppercase tracking-wide text-muted-foreground">
+                    Odds
+                  </p>
+                  <p className="font-mono text-lg font-bold">
+                    {prediction.odds.toFixed(2)}
+                  </p>
+                </div>
+              </div>
+            )}
+          </div>
+        )}
       </Link>
 
       <div className="mt-4 flex items-center justify-between text-xs text-muted-foreground">
         <span>
           {prediction.likesCount} likes · {prediction.commentsCount} comments
         </span>
-        <span>Confidence {prediction.confidence}/10</span>
+        {prediction.bookingCode ? (
+          <span className="inline-flex items-center gap-1 font-mono">
+            <Ticket className="size-3" />
+            {prediction.bookingCode}
+          </span>
+        ) : (
+          <span>Confidence {prediction.confidence}/10</span>
+        )}
       </div>
     </article>
   )

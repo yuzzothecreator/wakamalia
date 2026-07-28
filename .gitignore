@@ -34,6 +34,9 @@ yarn-error.log*
 *.tsbuildinfo
 next-env.d.ts
 
+# Uploaded prediction screenshots
+public/uploads
+
 # Prisma
 prisma/*.db
 prisma/*.db-journal

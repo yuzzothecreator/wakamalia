@@ -71,11 +71,35 @@ export const predictionSchema = z.object({
   odds: z.coerce.number().min(1.01).max(1000),
   confidence: z.coerce.number().int().min(1).max(10),
   bookmaker: z.string().optional(),
+  bookingCode: z.string().max(64).optional(),
   analysis: z.string().max(5000).optional(),
   tags: z.array(z.string()).max(10).optional(),
   visibility: z.enum(["FREE", "PREMIUM"]),
   price: z.coerce.number().min(0).optional(),
   scheduledAt: z.string().optional().nullable(),
+})
+
+/** Fast path: screenshot + booking code, minimal typing */
+export const quickPredictionSchema = z.object({
+  bookingCode: z
+    .string()
+    .min(3, "Enter a booking code")
+    .max(64, "Booking code is too long"),
+  sport: z
+    .enum([
+      "FOOTBALL",
+      "BASKETBALL",
+      "TENNIS",
+      "CRICKET",
+      "RUGBY",
+      "MMA",
+      "HORSE_RACING",
+      "OTHER",
+    ])
+    .default("FOOTBALL"),
+  visibility: z.enum(["FREE", "PREMIUM"]).default("FREE"),
+  price: z.coerce.number().min(0).optional(),
+  note: z.string().max(500).optional(),
 })
 
 export const profileSchema = z.object({
@@ -162,5 +186,6 @@ export const newsletterSchema = z.object({
 export type LoginInput = z.infer<typeof loginSchema>
 export type RegisterInput = z.infer<typeof registerSchema>
 export type PredictionInput = z.infer<typeof predictionSchema>
+export type QuickPredictionInput = z.infer<typeof quickPredictionSchema>
 export type ProfileInput = z.infer<typeof profileSchema>
 export type SearchInput = z.infer<typeof searchSchema>
