@@ -1,4 +1,37 @@
-﻿<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
-  <rect width="512" height="512" rx="96" fill="#0f766e"/>
-  <text x="256" y="310" text-anchor="middle" font-family="Arial,sans-serif" font-size="240" font-weight="700" fill="#f7fbf8">W</text>
+﻿<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" fill="none">
+  <defs>
+    <linearGradient id="teal" x1="64" y1="32" x2="464" y2="480" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#14967f"/>
+      <stop offset="1" stop-color="#0b5f58"/>
+    </linearGradient>
+    <linearGradient id="gold" x1="224" y1="96" x2="400" y2="384" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#f5d06a"/>
+      <stop offset="1" stop-color="#d4a017"/>
+    </linearGradient>
+  </defs>
+  <rect width="512" height="512" rx="128" fill="url(#teal)"/>
+  <ellipse cx="256" cy="304" rx="176" ry="112" fill="#062e2b" opacity="0.28"/>
+  <path
+    d="M88 368 C88 224 144 112 204 112 C236 112 252 160 256 208 C260 160 276 112 308 112 C368 112 424 224 424 368"
+    stroke="#f7fbf8"
+    stroke-width="40"
+    stroke-linecap="round"
+    stroke-linejoin="round"
+  />
+  <path
+    d="M136 352 C136 248 176 160 206 160 C230 160 246 200 256 240 C266 200 282 160 306 160 C336 160 376 248 376 352"
+    stroke="#f7fbf8"
+    stroke-width="16"
+    stroke-opacity="0.35"
+    stroke-linecap="round"
+  />
+  <path
+    d="M304 96 L240 240 L284 240 L216 400 L336 208 L284 208 Z"
+    fill="url(#gold)"
+  />
+  <g fill="#f5d06a">
+    <path d="M348 116 L362 150 L396 164 L362 178 L348 212 L334 178 L300 164 L334 150 Z"/>
+    <circle cx="388" cy="96" r="11"/>
+    <circle cx="408" cy="140" r="8"/>
+  </g>
 </svg>

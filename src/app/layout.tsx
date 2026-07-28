@@ -43,6 +43,13 @@ export const metadata: Metadata = {
     description: APP_DESCRIPTION,
   },
   manifest: "/manifest.webmanifest",
+  icons: {
+    icon: [
+      { url: "/icons/icon.svg", type: "image/svg+xml" },
+      { url: "/icons/logo.png", sizes: "512x512", type: "image/png" },
+    ],
+    apple: [{ url: "/icons/logo.png", sizes: "512x512", type: "image/png" }],
+  },
 }
 
 export const viewport: Viewport = {
