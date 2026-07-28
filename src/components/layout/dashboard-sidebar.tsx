@@ -101,9 +101,7 @@ export function DashboardSidebar() {
           {!sidebarCollapsed ? (
             <Logo className="text-white [&_span:last-child]:text-white" />
           ) : (
-            <span className="mx-auto flex size-9 items-center justify-center rounded-xl bg-primary text-sm font-bold">
-              W
-            </span>
+            <Logo showText={false} className="mx-auto" />
           )}
           <Button
             variant="ghost"
