@@ -30,6 +30,14 @@ import {
 } from "@/lib/demo-data"
 import { APP_NAME, APP_TAGLINE, ROUTES } from "@/config/site"
 import { formatNumber, formatPercent, getInitials } from "@/lib/utils"
+import type { PredictionCard as PredictionCardType } from "@/types"
+
+type LandingTipster = (typeof DEMO_TIPSTERS)[number]
+
+type LandingPageProps = {
+  predictions?: PredictionCardType[]
+  tipsters?: LandingTipster[]
+}
 
 const features = [
   {
@@ -65,7 +73,12 @@ const stats = [
   { label: "Creator payouts", value: "$1.2M+" },
 ]
 
-export function LandingPage() {
+export function LandingPage({
+  predictions = DEMO_PREDICTIONS,
+  tipsters = DEMO_TIPSTERS,
+}: LandingPageProps) {
+  const winners = predictions.filter((p) => p.status === "WON")
+
   return (
     <div>
       {/* Hero */}
@@ -119,7 +132,7 @@ export function LandingPage() {
                 <Badge variant="success">Settled · Verified</Badge>
               </div>
               <div className="space-y-3">
-                {DEMO_PREDICTIONS.slice(0, 2).map((p) => (
+                {predictions.slice(0, 2).map((p) => (
                   <PredictionCard key={p.id} prediction={p} />
                 ))}
               </div>
@@ -153,7 +166,7 @@ export function LandingPage() {
           </p>
         </div>
         <div className="grid gap-4 md:grid-cols-3">
-          {DEMO_TIPSTERS.map((t, i) => (
+          {tipsters.map((t, i) => (
             <Link
               key={t.id}
               href={`/tipsters/${t.user.profile?.username}`}
@@ -217,7 +230,7 @@ export function LandingPage() {
             </Button>
           </div>
           <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
-            {DEMO_PREDICTIONS.map((p) => (
+            {predictions.map((p) => (
               <PredictionCard key={p.id} prediction={p} />
             ))}
           </div>
@@ -244,7 +257,7 @@ export function LandingPage() {
               </tr>
             </thead>
             <tbody className="divide-y divide-border">
-              {DEMO_PREDICTIONS.filter((p) => p.status === "WON").map((p) => (
+              {winners.map((p) => (
                 <tr key={p.id} className="hover:bg-muted/30">
                   <td className="px-4 py-3 font-medium">{p.match}</td>
                   <td className="hidden px-4 py-3 sm:table-cell">
@@ -256,8 +269,7 @@ export function LandingPage() {
                   </td>
                 </tr>
               ))}
-              {DEMO_PREDICTIONS.filter((p) => p.status === "WON").length ===
-                0 && (
+              {winners.length === 0 && (
                 <tr>
                   <td
                     colSpan={4}

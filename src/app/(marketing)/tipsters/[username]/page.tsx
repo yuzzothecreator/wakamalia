@@ -6,7 +6,7 @@ import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { StatCard } from "@/components/shared/stat-card"
 import { PredictionCard } from "@/components/predictions/prediction-card"
-import { DEMO_PREDICTIONS, DEMO_TIPSTERS } from "@/lib/demo-data"
+import { getTipsterByUsername } from "@/server/data/catalog"
 import { formatCurrency, formatNumber, getInitials } from "@/lib/utils"
 
 interface PageProps {
@@ -20,17 +20,11 @@ export async function generateMetadata({ params }: PageProps) {
 
 export default async function TipsterProfilePage({ params }: PageProps) {
   const { username } = await params
-  const tipsterEntry = DEMO_TIPSTERS.find(
-    (t) => t.user.profile?.username === username
-  )
+  const tipster = await getTipsterByUsername(username)
 
-  if (!tipsterEntry) notFound()
+  if (!tipster) notFound()
 
-  const user = tipsterEntry.user
-  const stats = tipsterEntry
-  const predictions = DEMO_PREDICTIONS.filter(
-    (p) => p.tipster.profile?.username === username
-  )
+  const { user, stats, predictions } = tipster
 
   return (
     <div className="mx-auto max-w-7xl px-4 py-10 sm:px-6 lg:px-8">
@@ -70,7 +64,9 @@ export default async function TipsterProfilePage({ params }: PageProps) {
           </p>
           <div className="mt-3 flex flex-wrap gap-2">
             {stats.isVerified && <Badge variant="success">Verified</Badge>}
-            <Badge variant="secondary">{user.profile?.country}</Badge>
+            {user.profile?.country && (
+              <Badge variant="secondary">{user.profile.country}</Badge>
+            )}
             <Badge variant="outline">
               {formatNumber(stats.followerCount)} followers
             </Badge>

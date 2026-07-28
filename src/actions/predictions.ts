@@ -56,9 +56,8 @@ export async function createPredictionAction(
   } catch (error) {
     console.error("[createPredictionAction]", error)
     return {
-      success: true,
-      data: { id: `demo_${Date.now()}` },
-      message: "Saved locally (demo mode)",
+      success: false,
+      error: "Failed to create prediction. Check your database connection.",
     }
   }
 }

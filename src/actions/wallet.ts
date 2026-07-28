@@ -21,27 +21,26 @@ export async function getWalletSummaryAction(): Promise<
   }
 
   try {
-    const wallet = await prisma.wallet.findUnique({
-      where: { userId: session.user.id },
-    })
+    const [wallet, pending] = await Promise.all([
+      prisma.wallet.findUnique({
+        where: { userId: session.user.id },
+      }),
+      prisma.withdrawal.aggregate({
+        where: { userId: session.user.id, status: "PENDING" },
+        _sum: { amount: true },
+      }),
+    ])
 
-    if (wallet) {
-      return {
-        success: true,
-        data: {
-          balance: Number(wallet.balance),
-          currency: wallet.currency,
-          pendingWithdrawals: 0,
-        },
-      }
+    return {
+      success: true,
+      data: {
+        balance: Number(wallet?.balance ?? 0),
+        currency: wallet?.currency ?? "USD",
+        pendingWithdrawals: Number(pending._sum.amount ?? 0),
+      },
     }
   } catch {
-    /* demo fallback */
-  }
-
-  return {
-    success: true,
-    data: { balance: 124.5, currency: "USD", pendingWithdrawals: 40 },
+    return { success: false, error: "Unable to load wallet" }
   }
 }
 

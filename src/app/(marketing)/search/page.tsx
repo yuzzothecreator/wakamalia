@@ -1,36 +1,50 @@
 "use client"
 
-import { useMemo, useState } from "react"
+import { useEffect, useState } from "react"
 import Link from "next/link"
 import { Search } from "lucide-react"
 import { Input } from "@/components/ui/input"
 import { PredictionCard } from "@/components/predictions/prediction-card"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
-import { DEMO_PREDICTIONS, DEMO_TIPSTERS } from "@/lib/demo-data"
 import { getInitials } from "@/lib/utils"
+import type { PredictionCard as PredictionCardType, UserPublic } from "@/types"
+
+type TipsterResult = {
+  id: string
+  user: UserPublic
+}
 
 export default function SearchPage() {
   const [query, setQuery] = useState("")
+  const [predictions, setPredictions] = useState<PredictionCardType[]>([])
+  const [tipsters, setTipsters] = useState<TipsterResult[]>([])
+  const [loading, setLoading] = useState(false)
 
-  const results = useMemo(() => {
-    const q = query.trim().toLowerCase()
-    if (!q) return { predictions: [], tipsters: [] }
+  useEffect(() => {
+    const q = query.trim()
+    if (!q) {
+      setPredictions([])
+      setTipsters([])
+      setLoading(false)
+      return
+    }
 
-    const predictions = DEMO_PREDICTIONS.filter(
-      (p) =>
-        p.title.toLowerCase().includes(q) ||
-        p.match.toLowerCase().includes(q) ||
-        p.league?.toLowerCase().includes(q) ||
-        p.tipster.profile?.username.toLowerCase().includes(q)
-    )
+    const timer = setTimeout(() => {
+      setLoading(true)
+      fetch(`/api/search?q=${encodeURIComponent(q)}`)
+        .then((res) => res.json())
+        .then((data) => {
+          setPredictions(data.predictions ?? [])
+          setTipsters(data.tipsters ?? [])
+        })
+        .catch(() => {
+          setPredictions([])
+          setTipsters([])
+        })
+        .finally(() => setLoading(false))
+    }, 250)
 
-    const tipsters = DEMO_TIPSTERS.filter(
-      (t) =>
-        t.user.name.toLowerCase().includes(q) ||
-        t.user.profile?.username.toLowerCase().includes(q)
-    )
-
-    return { predictions, tipsters }
+    return () => clearTimeout(timer)
   }, [query])
 
   return (
@@ -53,13 +67,15 @@ export default function SearchPage() {
         <p className="text-center text-muted-foreground">
           Start typing to search predictions and tipsters.
         </p>
+      ) : loading ? (
+        <p className="text-center text-muted-foreground">Searching…</p>
       ) : (
         <div className="space-y-10">
-          {results.tipsters.length > 0 && (
+          {tipsters.length > 0 && (
             <section>
               <h2 className="mb-4 text-lg font-semibold">Tipsters</h2>
               <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-                {results.tipsters.map((t) => {
+                {tipsters.map((t) => {
                   const username = t.user.profile?.username ?? "tipster"
                   return (
                     <Link
@@ -82,18 +98,18 @@ export default function SearchPage() {
             </section>
           )}
 
-          {results.predictions.length > 0 && (
+          {predictions.length > 0 && (
             <section>
               <h2 className="mb-4 text-lg font-semibold">Predictions</h2>
               <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
-                {results.predictions.map((p) => (
+                {predictions.map((p) => (
                   <PredictionCard key={p.id} prediction={p} />
                 ))}
               </div>
             </section>
           )}
 
-          {results.predictions.length === 0 && results.tipsters.length === 0 && (
+          {predictions.length === 0 && tipsters.length === 0 && (
             <p className="text-center text-muted-foreground">
               No results for &ldquo;{query}&rdquo;
             </p>

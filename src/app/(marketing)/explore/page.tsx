@@ -1,6 +1,6 @@
 import { PredictionCard } from "@/components/predictions/prediction-card"
 import { Badge } from "@/components/ui/badge"
-import { DEMO_PREDICTIONS } from "@/lib/demo-data"
+import { listPredictions } from "@/server/data/catalog"
 import { SPORTS } from "@/config/site"
 
 export const metadata = {
@@ -8,7 +8,9 @@ export const metadata = {
   description: "Browse verified sports predictions from top tipsters.",
 }
 
-export default function ExplorePage() {
+export default async function ExplorePage() {
+  const { items } = await listPredictions({ page: 1, limit: 24 })
+
   return (
     <div className="mx-auto max-w-7xl px-4 py-10 sm:px-6 lg:px-8">
       <div className="mb-8 flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
@@ -31,11 +33,17 @@ export default function ExplorePage() {
         </div>
       </div>
 
-      <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
-        {DEMO_PREDICTIONS.map((prediction) => (
-          <PredictionCard key={prediction.id} prediction={prediction} />
-        ))}
-      </div>
+      {items.length === 0 ? (
+        <p className="rounded-2xl border border-dashed border-border p-10 text-center text-muted-foreground">
+          No predictions yet. Tipsters can publish their first pick from the dashboard.
+        </p>
+      ) : (
+        <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
+          {items.map((prediction) => (
+            <PredictionCard key={prediction.id} prediction={prediction} />
+          ))}
+        </div>
+      )}
     </div>
   )
 }

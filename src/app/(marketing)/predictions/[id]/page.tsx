@@ -10,7 +10,7 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card"
-import { DEMO_PREDICTIONS } from "@/lib/demo-data"
+import { getPredictionById } from "@/server/data/catalog"
 import { formatCurrency, getInitials } from "@/lib/utils"
 import { CountdownDisplay } from "./countdown-display"
 
@@ -20,7 +20,7 @@ interface PageProps {
 
 export async function generateMetadata({ params }: PageProps) {
   const { id } = await params
-  const prediction = DEMO_PREDICTIONS.find((p) => p.id === id)
+  const prediction = await getPredictionById(id)
   return {
     title: prediction ? `${prediction.title} | Wakamalia` : "Prediction | Wakamalia",
   }
@@ -28,7 +28,7 @@ export async function generateMetadata({ params }: PageProps) {
 
 export default async function PredictionDetailPage({ params }: PageProps) {
   const { id } = await params
-  const prediction = DEMO_PREDICTIONS.find((p) => p.id === id)
+  const prediction = await getPredictionById(id)
 
   if (!prediction) notFound()
 

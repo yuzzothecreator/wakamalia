@@ -1,4 +1,5 @@
 import Link from "next/link"
+import { redirect } from "next/navigation"
 import {
   BarChart3,
   DollarSign,
@@ -10,28 +11,34 @@ import {
 import { StatCard } from "@/components/shared/stat-card"
 import { PredictionCard } from "@/components/predictions/prediction-card"
 import { Button } from "@/components/ui/button"
-import { DEMO_PREDICTIONS } from "@/lib/demo-data"
+import { getSession } from "@/lib/session"
+import { getDashboardForUser } from "@/server/data/catalog"
 import { formatCurrency } from "@/lib/utils"
 import { ROUTES } from "@/config/site"
 
-const demoStats = {
-  revenue: 3240,
-  subscribers: 328,
-  predictions: 214,
-  winRate: 67.2,
-  roi: 18.4,
-  views: 8420,
-  followers: 4120,
-}
+export default async function DashboardPage() {
+  const session = await getSession()
+  if (!session?.user) redirect(ROUTES.login)
 
-export default function DashboardPage() {
-  const recentPredictions = DEMO_PREDICTIONS.slice(0, 3)
+  const dashboard = await getDashboardForUser(session.user.id)
+  const stats = dashboard?.stats ?? {
+    revenue: 0,
+    subscribers: 0,
+    predictions: 0,
+    winRate: 0,
+    roi: 0,
+    views: 0,
+    followers: 0,
+  }
+  const recentPredictions = dashboard?.recentPredictions ?? []
 
   return (
     <div className="mx-auto max-w-6xl space-y-8">
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div>
-          <h1 className="text-2xl font-bold tracking-tight">Tipster dashboard</h1>
+          <h1 className="text-2xl font-bold tracking-tight">
+            Tipster dashboard
+          </h1>
           <p className="text-muted-foreground">
             Track performance, subscribers, and earnings at a glance.
           </p>
@@ -44,27 +51,24 @@ export default function DashboardPage() {
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
         <StatCard
           title="Monthly revenue"
-          value={formatCurrency(demoStats.revenue)}
+          value={formatCurrency(stats.revenue)}
           icon={DollarSign}
-          trend={{ value: "+12.4% vs last month", positive: true }}
         />
         <StatCard
           title="Subscribers"
-          value={String(demoStats.subscribers)}
+          value={String(stats.subscribers)}
           icon={Users}
-          trend={{ value: "+18 this week", positive: true }}
         />
         <StatCard
           title="Win rate"
-          value={`${demoStats.winRate}%`}
+          value={`${stats.winRate}%`}
           icon={Target}
-          description={`ROI ${demoStats.roi}%`}
+          description={`ROI ${stats.roi}%`}
         />
         <StatCard
           title="Profile views"
-          value={demoStats.views.toLocaleString()}
+          value={stats.views.toLocaleString()}
           icon={Eye}
-          trend={{ value: "+6.2%", positive: true }}
         />
       </div>
 
@@ -72,13 +76,13 @@ export default function DashboardPage() {
         <StatCard
           className="lg:col-span-1"
           title="Total predictions"
-          value={String(demoStats.predictions)}
+          value={String(stats.predictions)}
           icon={BarChart3}
         />
         <StatCard
           className="lg:col-span-1"
           title="Followers"
-          value={demoStats.followers.toLocaleString()}
+          value={stats.followers.toLocaleString()}
           icon={TrendingUp}
         />
         <div className="rounded-2xl border border-border bg-card p-5 shadow-sm lg:col-span-1">
@@ -104,11 +108,20 @@ export default function DashboardPage() {
             View all
           </Link>
         </div>
-        <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
-          {recentPredictions.map((p) => (
-            <PredictionCard key={p.id} prediction={p} />
-          ))}
-        </div>
+        {recentPredictions.length === 0 ? (
+          <p className="rounded-2xl border border-dashed border-border p-8 text-center text-muted-foreground">
+            No predictions yet.{" "}
+            <Link href={ROUTES.dashboard.create} className="text-primary hover:underline">
+              Create your first pick
+            </Link>
+          </p>
+        ) : (
+          <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
+            {recentPredictions.map((p) => (
+              <PredictionCard key={p.id} prediction={p} />
+            ))}
+          </div>
+        )}
       </section>
     </div>
   )

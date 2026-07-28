@@ -1,85 +1,105 @@
 "use client"
 
 import Link from "next/link"
+import { useEffect, useState } from "react"
 import { BadgeCheck, Trophy } from "lucide-react"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { DEMO_TIPSTERS } from "@/lib/demo-data"
 import { formatNumber, formatPercent, getInitials } from "@/lib/utils"
+import type { LeaderboardEntry } from "@/types"
 
-const metrics = [
-  { key: "roi", label: "ROI", getValue: (t: (typeof DEMO_TIPSTERS)[0]) => formatPercent(t.roi) },
-  {
-    key: "winRate",
-    label: "Win rate",
-    getValue: (t: (typeof DEMO_TIPSTERS)[0]) => `${t.winRate.toFixed(1)}%`,
-  },
-  {
-    key: "followers",
-    label: "Followers",
-    getValue: (t: (typeof DEMO_TIPSTERS)[0]) => formatNumber(t.followerCount),
-  },
-] as const
+type MetricKey = "roi" | "winRate" | "followers"
+
+function formatMetric(entry: LeaderboardEntry, key: MetricKey) {
+  if (key === "winRate") return `${entry.metric.toFixed(1)}%`
+  if (key === "followers") return formatNumber(entry.metric)
+  return formatPercent(entry.metric)
+}
 
 function LeaderboardTable({
+  entries,
   sortKey,
 }: {
-  sortKey: "roi" | "winRate" | "followers"
+  entries: LeaderboardEntry[]
+  sortKey: MetricKey
 }) {
-  const sorted = [...DEMO_TIPSTERS].sort((a, b) => {
-    if (sortKey === "winRate") return b.winRate - a.winRate
-    if (sortKey === "followers") return b.followerCount - a.followerCount
-    return b.roi - a.roi
-  })
-
-  const metric = metrics.find((m) => m.key === sortKey)!
-
   return (
     <div className="overflow-hidden rounded-2xl border border-border bg-card">
       <div className="divide-y divide-border">
-        {sorted.map((entry, index) => {
-          const username = entry.user.profile?.username ?? "tipster"
-          return (
-            <Link
-              key={entry.id}
-              href={`/tipsters/${username}`}
-              className="flex items-center gap-4 px-5 py-4 transition-colors hover:bg-secondary/50"
-            >
-              <span
-                className={`flex size-8 shrink-0 items-center justify-center rounded-lg text-sm font-bold ${
-                  index === 0
-                    ? "bg-primary text-primary-foreground"
-                    : "bg-secondary text-muted-foreground"
-                }`}
+        {entries.length === 0 ? (
+          <p className="px-5 py-10 text-center text-muted-foreground">
+            No tipsters ranked yet.
+          </p>
+        ) : (
+          entries.map((entry) => {
+            const username = entry.tipster.profile?.username ?? "tipster"
+            return (
+              <Link
+                key={`${entry.rank}-${entry.tipster.id}`}
+                href={`/tipsters/${username}`}
+                className="flex items-center gap-4 px-5 py-4 transition-colors hover:bg-secondary/50"
               >
-                {index + 1}
-              </span>
-              <Avatar className="size-10">
-                <AvatarImage src={entry.user.image ?? undefined} />
-                <AvatarFallback>{getInitials(entry.user.name)}</AvatarFallback>
-              </Avatar>
-              <div className="min-w-0 flex-1">
-                <div className="flex items-center gap-1.5">
-                  <span className="font-medium">{entry.user.name}</span>
-                  {entry.isVerified && (
-                    <BadgeCheck className="size-4 shrink-0 text-primary" />
-                  )}
+                <span
+                  className={`flex size-8 shrink-0 items-center justify-center rounded-lg text-sm font-bold ${
+                    entry.rank === 1
+                      ? "bg-primary text-primary-foreground"
+                      : "bg-secondary text-muted-foreground"
+                  }`}
+                >
+                  {entry.rank}
+                </span>
+                <Avatar className="size-10">
+                  <AvatarImage src={entry.tipster.image ?? undefined} />
+                  <AvatarFallback>{getInitials(entry.tipster.name)}</AvatarFallback>
+                </Avatar>
+                <div className="min-w-0 flex-1">
+                  <div className="flex items-center gap-1.5">
+                    <span className="font-medium">{entry.tipster.name}</span>
+                    {entry.tipster.tipster?.isVerified && (
+                      <BadgeCheck className="size-4 shrink-0 text-primary" />
+                    )}
+                  </div>
+                  <p className="text-sm text-muted-foreground">@{username}</p>
                 </div>
-                <p className="text-sm text-muted-foreground">@{username}</p>
-              </div>
-              <div className="text-right">
-                <p className="font-mono text-lg font-bold">{metric.getValue(entry)}</p>
-                <p className="text-xs text-muted-foreground">{metric.label}</p>
-              </div>
-            </Link>
-          )
-        })}
+                <div className="text-right">
+                  <p className="font-mono text-lg font-bold">
+                    {formatMetric(entry, sortKey)}
+                  </p>
+                  <p className="text-xs text-muted-foreground">{entry.metricLabel}</p>
+                </div>
+              </Link>
+            )
+          })
+        )}
       </div>
     </div>
   )
 }
 
 export default function LeaderboardPage() {
+  const [metric, setMetric] = useState<MetricKey>("roi")
+  const [entries, setEntries] = useState<LeaderboardEntry[]>([])
+  const [loading, setLoading] = useState(true)
+
+  useEffect(() => {
+    let cancelled = false
+    setLoading(true)
+    fetch(`/api/leaderboard?metric=${metric}`)
+      .then((res) => res.json())
+      .then((data) => {
+        if (!cancelled) setEntries(data.items ?? [])
+      })
+      .catch(() => {
+        if (!cancelled) setEntries([])
+      })
+      .finally(() => {
+        if (!cancelled) setLoading(false)
+      })
+    return () => {
+      cancelled = true
+    }
+  }, [metric])
+
   return (
     <div className="mx-auto max-w-3xl px-4 py-10 sm:px-6 lg:px-8">
       <div className="mb-8 text-center">
@@ -92,20 +112,22 @@ export default function LeaderboardPage() {
         </p>
       </div>
 
-      <Tabs defaultValue="roi" className="w-full">
+      <Tabs
+        value={metric}
+        onValueChange={(value) => setMetric(value as MetricKey)}
+        className="w-full"
+      >
         <TabsList className="mb-6 w-full justify-center">
           <TabsTrigger value="roi">ROI</TabsTrigger>
           <TabsTrigger value="winRate">Win rate</TabsTrigger>
           <TabsTrigger value="followers">Followers</TabsTrigger>
         </TabsList>
-        <TabsContent value="roi">
-          <LeaderboardTable sortKey="roi" />
-        </TabsContent>
-        <TabsContent value="winRate">
-          <LeaderboardTable sortKey="winRate" />
-        </TabsContent>
-        <TabsContent value="followers">
-          <LeaderboardTable sortKey="followers" />
+        <TabsContent value={metric}>
+          {loading ? (
+            <p className="py-10 text-center text-muted-foreground">Loading rankings…</p>
+          ) : (
+            <LeaderboardTable entries={entries} sortKey={metric} />
+          )}
         </TabsContent>
       </Tabs>
     </div>
