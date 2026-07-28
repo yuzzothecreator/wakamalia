@@ -1,5 +1,6 @@
 "use client"
 
+import Image from "next/image"
 import Link from "next/link"
 import { motion } from "framer-motion"
 import {
@@ -81,62 +82,65 @@ export function LandingPage({
 
   return (
     <div>
-      {/* Hero */}
-      <section className="hero-glow relative overflow-hidden">
-        <div className="mx-auto grid max-w-7xl gap-12 px-4 pb-20 pt-16 sm:px-6 lg:grid-cols-2 lg:items-center lg:gap-16 lg:px-8 lg:pb-28 lg:pt-24">
+      {/* Hero — full-bleed brand composition */}
+      <section className="relative isolate min-h-[min(92vh,920px)] overflow-hidden">
+        <Image
+          src="/images/hero-stadium.jpg"
+          alt=""
+          fill
+          priority
+          className="object-cover object-center"
+          sizes="100vw"
+        />
+        <div className="absolute inset-0 bg-gradient-to-r from-[#062e2b]/95 via-[#0f766e]/78 to-[#0f766e]/35" />
+        <div className="absolute inset-0 bg-gradient-to-t from-[#062e2b]/70 via-transparent to-[#062e2b]/25" />
+
+        <div className="relative mx-auto flex min-h-[min(92vh,920px)] max-w-7xl flex-col justify-center px-4 py-24 sm:px-6 lg:px-8">
           <motion.div
-            initial={{ opacity: 0, y: 24 }}
+            initial={{ opacity: 0, y: 28 }}
             animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.5 }}
-            className="space-y-6"
+            transition={{ duration: 0.55, ease: "easeOut" }}
+            className="max-w-2xl"
           >
-            <Badge variant="secondary" className="rounded-lg px-3 py-1">
-              Social marketplace for sports tipsters
-            </Badge>
-            <div>
-              <p className="mb-3 text-4xl font-bold tracking-tight text-primary sm:text-5xl lg:text-6xl">
-                {APP_NAME}
-              </p>
-              <h1 className="max-w-xl text-3xl font-bold tracking-tight text-balance text-foreground sm:text-4xl lg:text-5xl">
-                {APP_TAGLINE}
-              </h1>
-            </div>
-            <p className="max-w-lg text-base leading-relaxed text-muted-foreground text-pretty sm:text-lg">
-              Post free or premium predictions, prove your edge with transparent
-              stats, grow subscribers, and get paid through wallet, M-Pesa,
-              Stripe, and more.
+            <motion.p
+              initial={{ opacity: 0, y: 12 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.5, delay: 0.08 }}
+              className="mb-4 text-5xl font-bold tracking-tight text-white sm:text-6xl lg:text-7xl"
+            >
+              {APP_NAME}
+            </motion.p>
+            <h1 className="max-w-xl text-2xl font-semibold tracking-tight text-balance text-white/95 sm:text-3xl lg:text-4xl">
+              {APP_TAGLINE}
+            </h1>
+            <p className="mt-5 max-w-md text-base leading-relaxed text-pretty text-teal-50/85 sm:text-lg">
+              Verified tips, trusted tipsters, and real payouts — in one marketplace.
             </p>
-            <div className="flex flex-col gap-3 sm:flex-row">
-              <Button size="lg" asChild>
+            <motion.div
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.45, delay: 0.2 }}
+              className="mt-8 flex flex-col gap-3 sm:flex-row"
+            >
+              <Button
+                size="lg"
+                className="bg-accent text-accent-foreground hover:bg-accent/90"
+                asChild
+              >
                 <Link href={ROUTES.register}>
                   Become a Tipster
                   <ArrowRight className="size-4" />
                 </Link>
               </Button>
-              <Button size="lg" variant="outline" asChild>
-                <Link href={ROUTES.explore}>Browse Predictions</Link>
+              <Button
+                size="lg"
+                variant="outline"
+                className="border-white/35 bg-white/10 text-white backdrop-blur-sm hover:bg-white/20 hover:text-white"
+                asChild
+              >
+                <Link href={ROUTES.tips}>Browse today&apos;s tips</Link>
               </Button>
-            </div>
-          </motion.div>
-
-          <motion.div
-            initial={{ opacity: 0, y: 32 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.6, delay: 0.15 }}
-            className="relative"
-          >
-            <div className="absolute -inset-4 rounded-[2rem] bg-gradient-to-br from-primary/15 via-transparent to-accent/20 blur-2xl" />
-            <div className="glass relative rounded-3xl p-5 sm:p-6">
-              <div className="mb-4 flex items-center justify-between">
-                <p className="text-sm font-medium">Live marketplace</p>
-                <Badge variant="success">Settled · Verified</Badge>
-              </div>
-              <div className="space-y-3">
-                {predictions.slice(0, 2).map((p) => (
-                  <PredictionCard key={p.id} prediction={p} />
-                ))}
-              </div>
-            </div>
+            </motion.div>
           </motion.div>
         </div>
       </section>
