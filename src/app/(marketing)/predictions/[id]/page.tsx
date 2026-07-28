@@ -11,8 +11,11 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card"
+import { UnlockPredictionButton } from "@/components/predictions/unlock-prediction-button"
 import { getPredictionById } from "@/server/data/catalog"
-import { formatCurrency, getInitials } from "@/lib/utils"
+import { canAccessPrediction } from "@/server/data/access"
+import { getSession } from "@/lib/session"
+import { getInitials } from "@/lib/utils"
 import { CountdownDisplay } from "./countdown-display"
 
 interface PageProps {
@@ -33,9 +36,13 @@ export default async function PredictionDetailPage({ params }: PageProps) {
 
   if (!prediction) notFound()
 
+  const session = await getSession()
+  const unlocked =
+    prediction.visibility === "FREE" ||
+    (await canAccessPrediction(prediction.id, session?.user?.id))
+
   const username = prediction.tipster.profile?.username ?? "tipster"
-  const locked =
-    prediction.visibility === "PREMIUM" && !prediction.isUnlocked
+  const locked = prediction.visibility === "PREMIUM" && !unlocked
   const screenshot = prediction.images?.[0]
   const isQuickPost = Boolean(prediction.bookingCode || screenshot)
 
@@ -44,7 +51,7 @@ export default async function PredictionDetailPage({ params }: PageProps) {
       <div className="mb-6 flex flex-wrap items-center gap-2">
         <Badge variant="secondary">{prediction.sport.replace("_", " ")}</Badge>
         {prediction.league && <Badge variant="outline">{prediction.league}</Badge>}
-        {prediction.bookingCode && (
+        {prediction.bookingCode && !locked && (
           <Badge variant="outline" className="font-mono">
             <Ticket className="mr-1 size-3" />
             {prediction.bookingCode}
@@ -91,13 +98,10 @@ export default async function PredictionDetailPage({ params }: PageProps) {
         </CardHeader>
         <CardContent className="space-y-6">
           {locked ? (
-            <div className="rounded-xl bg-secondary/60 p-8 text-center">
-              <p className="font-medium">Premium content locked</p>
-              <p className="mt-1 text-sm text-muted-foreground">
-                Unlock for {formatCurrency(prediction.price)}
-              </p>
-              <Button className="mt-4">Unlock prediction</Button>
-            </div>
+            <UnlockPredictionButton
+              predictionId={prediction.id}
+              price={prediction.price}
+            />
           ) : (
             <>
               {prediction.bookingCode && (

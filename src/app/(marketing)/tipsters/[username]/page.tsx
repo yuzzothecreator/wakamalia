@@ -1,13 +1,15 @@
 import Link from "next/link"
 import { notFound } from "next/navigation"
-import { BadgeCheck, Users } from "lucide-react"
+import { BadgeCheck } from "lucide-react"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Badge } from "@/components/ui/badge"
-import { Button } from "@/components/ui/button"
 import { StatCard } from "@/components/shared/stat-card"
 import { PredictionCard } from "@/components/predictions/prediction-card"
+import { TipsterActions } from "@/components/tipsters/tipster-actions"
 import { getTipsterByUsername } from "@/server/data/catalog"
-import { formatCurrency, formatNumber, getInitials } from "@/lib/utils"
+import { getViewerTipsterState, markPredictionsAccess } from "@/server/data/access"
+import { getSession } from "@/lib/session"
+import { formatNumber, getInitials } from "@/lib/utils"
 
 interface PageProps {
   params: Promise<{ username: string }>
@@ -24,7 +26,11 @@ export default async function TipsterProfilePage({ params }: PageProps) {
 
   if (!tipster) notFound()
 
-  const { user, stats, predictions } = tipster
+  const session = await getSession()
+  const viewerId = session?.user?.id
+  const { user, stats } = tipster
+  const viewerState = await getViewerTipsterState(user.id, viewerId)
+  const predictions = await markPredictionsAccess(tipster.predictions, viewerId)
 
   return (
     <div className="mx-auto max-w-7xl px-4 py-10 sm:px-6 lg:px-8">
@@ -49,15 +55,14 @@ export default async function TipsterProfilePage({ params }: PageProps) {
                 <p className="text-muted-foreground">@{username}</p>
               </div>
             </div>
-            <div className="flex gap-2">
-              <Button variant="outline">
-                <Users className="size-4" />
-                Follow
-              </Button>
-              <Button>
-                Subscribe · {formatCurrency(stats.monthlyPrice)}/mo
-              </Button>
-            </div>
+            <TipsterActions
+              tipsterUserId={user.id}
+              weeklyPrice={stats.weeklyPrice}
+              monthlyPrice={stats.monthlyPrice}
+              initialFollowing={viewerState.isFollowing}
+              initialSubscribed={viewerState.isSubscribed}
+              isOwner={viewerState.isOwner}
+            />
           </div>
           <p className="mt-4 max-w-2xl text-sm leading-relaxed text-muted-foreground">
             {user.profile?.bio}
@@ -70,6 +75,9 @@ export default async function TipsterProfilePage({ params }: PageProps) {
             <Badge variant="outline">
               {formatNumber(stats.followerCount)} followers
             </Badge>
+            {viewerState.isSubscribed && (
+              <Badge variant="premium">You&apos;re subscribed</Badge>
+            )}
           </div>
         </div>
       </div>

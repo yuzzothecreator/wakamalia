@@ -5,6 +5,8 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { listPredictions, listTipsters } from "@/server/data/catalog"
+import { markPredictionsAccess } from "@/server/data/access"
+import { getSession } from "@/lib/session"
 import { ROUTES, SPORTS } from "@/config/site"
 import { cn, formatNumber, formatPercent, getInitials } from "@/lib/utils"
 
@@ -45,10 +47,12 @@ export default async function ExplorePage({ searchParams }: PageProps) {
   ) as DayFilter
   const sport = params.sport ?? "ALL"
 
-  const [{ items, total }, tipsters] = await Promise.all([
+  const [{ items: rawItems, total }, tipsters, session] = await Promise.all([
     listPredictions({ day, sport, page: 1, limit: 40 }),
     listTipsters({ sort: "roi", limit: 8 }),
+    getSession(),
   ])
+  const items = await markPredictionsAccess(rawItems, session?.user?.id)
 
   const dayLabel =
     dayOptions.find((option) => option.value === day)?.label ?? "Today"
