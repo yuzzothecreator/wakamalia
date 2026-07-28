@@ -193,7 +193,77 @@ export const leaderboardRouter = createTRPCRouter({
           .default("roi"),
       })
     )
-    .query(async () => DEMO_LEADERBOARD),
+    .query(async ({ ctx, input }) => {
+      try {
+        const orderBy =
+          input.metric === "winRate" || input.metric === "accuracy"
+            ? { winRate: "desc" as const }
+            : input.metric === "followers"
+              ? { followerCount: "desc" as const }
+              : input.metric === "earnings"
+                ? { totalEarnings: "desc" as const }
+                : { roi: "desc" as const }
+
+        const tipsters = await ctx.prisma.tipster.findMany({
+          include: { user: { include: { profile: true } } },
+          orderBy,
+          take: 50,
+        })
+
+        if (!tipsters.length) return DEMO_LEADERBOARD
+
+        return tipsters.map((tipster, index) => {
+          const metric =
+            input.metric === "winRate" || input.metric === "accuracy"
+              ? tipster.winRate
+              : input.metric === "followers"
+                ? tipster.followerCount
+                : input.metric === "earnings"
+                  ? tipster.totalEarnings
+                  : tipster.roi
+
+          return {
+            rank: index + 1,
+            tipster: {
+              id: tipster.user.id,
+              name: tipster.user.name,
+              image: tipster.user.image,
+              role: tipster.user.role,
+              profile: tipster.user.profile,
+              tipster: {
+                isVerified: tipster.isVerified,
+                trustScore: tipster.trustScore,
+                roi: tipster.roi,
+                winRate: tipster.winRate,
+                totalPredictions: tipster.totalPredictions,
+                totalWins: tipster.totalWins,
+                totalLosses: tipster.totalLosses,
+                averageOdds: tipster.averageOdds,
+                monthlyProfit: tipster.monthlyProfit,
+                totalEarnings: tipster.totalEarnings,
+                winningStreak: tipster.winningStreak,
+                bestStreak: tipster.bestStreak,
+                subscriberCount: tipster.subscriberCount,
+                followerCount: tipster.followerCount,
+                weeklyPrice: tipster.weeklyPrice,
+                monthlyPrice: tipster.monthlyPrice,
+              },
+            },
+            metric: Number(metric),
+            metricLabel:
+              input.metric === "winRate" || input.metric === "accuracy"
+                ? "Win rate"
+                : input.metric === "followers"
+                  ? "Followers"
+                  : input.metric === "earnings"
+                    ? "Earnings"
+                    : "ROI",
+          }
+        })
+      } catch {
+        return DEMO_LEADERBOARD
+      }
+    }),
 })
 
 export const userRouter = createTRPCRouter({

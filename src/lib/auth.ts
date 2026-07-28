@@ -1,10 +1,12 @@
 import { betterAuth } from "better-auth"
 import { prismaAdapter } from "better-auth/adapters/prisma"
+import { expo } from "@better-auth/expo"
 import { twoFactor, emailOTP } from "better-auth/plugins"
 import { prisma } from "@/server/db"
 import { APP_NAME } from "@/config/site"
 
 const appUrl = process.env.BETTER_AUTH_URL ?? process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000"
+const isDev = process.env.NODE_ENV !== "production"
 
 export const auth = betterAuth({
   appName: APP_NAME,
@@ -108,6 +110,7 @@ export const auth = betterAuth({
     },
   },
   plugins: [
+    expo(),
     twoFactor({
       issuer: APP_NAME,
     }),
@@ -127,6 +130,17 @@ export const auth = betterAuth({
     "http://127.0.0.1:3000",
     "http://127.0.0.1:3001",
     "http://127.0.0.1:3002",
+    // Expo / React Native deep links
+    "wakamalia://",
+    "wakamalia://*",
+    ...(isDev
+      ? [
+          "exp://",
+          "exp://**",
+          "exp://192.168.*.*:*/**",
+          "exp://10.0.*.*:*/**",
+        ]
+      : []),
   ],
 })
 
