@@ -1,15 +1,20 @@
 "use server"
 
 import { revalidatePath } from "next/cache"
-import { getSession } from "@/lib/session"
+import { requireSession } from "@/lib/session"
 import { prisma } from "@/server/db"
 import type { ApiResponse } from "@/types"
 
 export async function toggleFollowAction(
   tipsterUserId: string
 ): Promise<ApiResponse<{ following: boolean }>> {
-  const session = await getSession()
-  if (!session?.user) {
+  let session
+  try {
+    session = await requireSession()
+  } catch (error) {
+    if (error instanceof Error && error.message === "Account banned") {
+      return { success: false, error: "Account banned" }
+    }
     return { success: false, error: "Please log in to follow tipsters" }
   }
 

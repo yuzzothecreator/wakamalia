@@ -65,10 +65,20 @@ function stubVerify(
   provider: PaymentProvider,
   input: VerifyPaymentInput
 ): Promise<VerifyPaymentResult> {
+  // Never auto-complete payments in production — requires a real provider adapter
+  if (process.env.NODE_ENV === "production") {
+    return Promise.resolve({
+      success: false,
+      reference: input.reference,
+      status: "FAILED",
+      raw: { provider, reason: "Payment provider not configured" },
+    })
+  }
+
   return Promise.resolve({
-    success: true,
+    success: false,
     reference: input.reference,
-    status: "COMPLETED",
+    status: "PENDING",
     raw: { provider, stub: true },
   })
 }

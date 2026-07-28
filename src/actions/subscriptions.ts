@@ -1,7 +1,7 @@
 "use server"
 
 import { revalidatePath } from "next/cache"
-import { getSession } from "@/lib/session"
+import { requireSession } from "@/lib/session"
 import { prisma } from "@/server/db"
 import { PLATFORM_COMMISSION_RATE } from "@/config/site"
 import type { ApiResponse } from "@/types"
@@ -25,8 +25,13 @@ export async function subscribeToTipsterAction(input: {
   tipsterId: string
   interval: "WEEKLY" | "MONTHLY"
 }): Promise<ApiResponse<{ subscriptionId: string }>> {
-  const session = await getSession()
-  if (!session?.user) {
+  let session
+  try {
+    session = await requireSession()
+  } catch (error) {
+    if (error instanceof Error && error.message === "Account banned") {
+      return { success: false, error: "Account banned" }
+    }
     return { success: false, error: "Please log in to subscribe" }
   }
 
@@ -79,9 +84,16 @@ export async function subscribeToTipsterAction(input: {
     const endsAt = addInterval(startsAt, input.interval)
 
     const subscription = await prisma.$transaction(async (tx) => {
-      const updated = await tx.wallet.update({
-        where: { userId: session.user.id },
+      const debited = await tx.wallet.updateMany({
+        where: { userId: session.user.id, balance: { gte: amount } },
         data: { balance: { decrement: amount } },
+      })
+      if (debited.count !== 1) {
+        throw new Error("INSUFFICIENT_FUNDS")
+      }
+
+      const updated = await tx.wallet.findUniqueOrThrow({
+        where: { userId: session.user.id },
       })
 
       const tipsterWallet = await tx.wallet.upsert({
@@ -185,6 +197,12 @@ export async function subscribeToTipsterAction(input: {
     }
   } catch (error) {
     console.error("[subscribeToTipsterAction]", error)
+    if (error instanceof Error && error.message === "INSUFFICIENT_FUNDS") {
+      return {
+        success: false,
+        error: "Insufficient wallet balance — top up your wallet first.",
+      }
+    }
     return { success: false, error: "Subscription failed. Try again." }
   }
 }
@@ -192,8 +210,10 @@ export async function subscribeToTipsterAction(input: {
 export async function cancelSubscriptionAction(
   subscriptionId: string
 ): Promise<ApiResponse> {
-  const session = await getSession()
-  if (!session?.user) {
+  let session
+  try {
+    session = await requireSession()
+  } catch {
     return { success: false, error: "Unauthorized" }
   }
 
@@ -215,8 +235,13 @@ export async function cancelSubscriptionAction(
 export async function unlockPredictionAction(
   predictionId: string
 ): Promise<ApiResponse<{ unlocked: boolean }>> {
-  const session = await getSession()
-  if (!session?.user) {
+  let session
+  try {
+    session = await requireSession()
+  } catch (error) {
+    if (error instanceof Error && error.message === "Account banned") {
+      return { success: false, error: "Account banned" }
+    }
     return { success: false, error: "Please log in to unlock" }
   }
 
@@ -284,9 +309,16 @@ export async function unlockPredictionAction(
     const tipsterEarn = Number((amount - commission).toFixed(2))
 
     await prisma.$transaction(async (tx) => {
-      const updated = await tx.wallet.update({
-        where: { userId: session.user.id },
+      const debited = await tx.wallet.updateMany({
+        where: { userId: session.user.id, balance: { gte: amount } },
         data: { balance: { decrement: amount } },
+      })
+      if (debited.count !== 1) {
+        throw new Error("INSUFFICIENT_FUNDS")
+      }
+
+      const updated = await tx.wallet.findUniqueOrThrow({
+        where: { userId: session.user.id },
       })
 
       await tx.wallet.upsert({
@@ -386,6 +418,12 @@ export async function unlockPredictionAction(
     }
   } catch (error) {
     console.error("[unlockPredictionAction]", error)
+    if (error instanceof Error && error.message === "INSUFFICIENT_FUNDS") {
+      return {
+        success: false,
+        error: "Insufficient wallet balance — top up first.",
+      }
+    }
     return { success: false, error: "Unlock failed. Try again." }
   }
 }

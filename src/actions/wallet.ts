@@ -2,9 +2,10 @@
 
 import { revalidatePath } from "next/cache"
 import { depositSchema, withdrawalSchema } from "@/lib/validations"
-import { getSession } from "@/lib/session"
+import { getSession, requireSession } from "@/lib/session"
 import { prisma } from "@/server/db"
 import { createCheckout, verifyPayment } from "@/services/payments"
+import { MIN_WITHDRAWAL_AMOUNT } from "@/config/site"
 import type { ApiResponse, WalletSummary } from "@/types"
 import type { z } from "zod"
 import { nanoid } from "nanoid"
@@ -47,6 +48,12 @@ export async function getWalletSummaryAction(): Promise<
 export async function depositAction(
   input: DepositInput
 ): Promise<ApiResponse<{ checkoutUrl?: string; reference: string }>> {
+  try {
+    await requireSession()
+  } catch {
+    return { success: false, error: "Unauthorized" }
+  }
+
   const session = await getSession()
   if (!session?.user) {
     return { success: false, error: "Unauthorized" }
@@ -75,31 +82,54 @@ export async function verifyDepositAction(
   provider: DepositInput["provider"],
   reference: string
 ): Promise<ApiResponse> {
-  const session = await getSession()
-  if (!session?.user) {
+  let session
+  try {
+    session = await requireSession()
+  } catch {
     return { success: false, error: "Unauthorized" }
+  }
+
+  if (!reference || reference.length > 64 || !/^[a-zA-Z0-9_-]+$/.test(reference)) {
+    return { success: false, error: "Invalid payment reference" }
   }
 
   const result = await verifyPayment(provider, { provider, reference })
 
-  if (!result.success) {
+  if (!result.success || result.status !== "COMPLETED") {
     return { success: false, error: "Payment not verified" }
   }
 
+  const amount = Number(result.amount ?? 0)
+  if (!Number.isFinite(amount) || amount <= 0) {
+    return { success: false, error: "Payment amount missing — cannot credit wallet" }
+  }
+
   try {
-    await prisma.wallet.upsert({
+    const wallet = await prisma.wallet.upsert({
       where: { userId: session.user.id },
       create: {
         userId: session.user.id,
-        balance: result.amount ?? 0,
+        balance: amount,
         currency: result.currency ?? "USD",
       },
       update: {
-        balance: { increment: result.amount ?? 0 },
+        balance: { increment: amount },
       },
     })
-  } catch {
-    /* demo */
+
+    await prisma.transaction.create({
+      data: {
+        userId: session.user.id,
+        type: "DEPOSIT",
+        amount,
+        balanceAfter: Number(wallet.balance),
+        description: `Deposit via ${provider}`,
+        referenceId: reference,
+      },
+    })
+  } catch (error) {
+    console.error("[verifyDepositAction]", error)
+    return { success: false, error: "Failed to credit wallet" }
   }
 
   revalidatePath("/wallet")
@@ -109,8 +139,10 @@ export async function verifyDepositAction(
 export async function requestWithdrawalAction(
   input: WithdrawalInput
 ): Promise<ApiResponse<{ id: string }>> {
-  const session = await getSession()
-  if (!session?.user) {
+  let session
+  try {
+    session = await requireSession()
+  } catch {
     return { success: false, error: "Unauthorized" }
   }
 
@@ -119,26 +151,61 @@ export async function requestWithdrawalAction(
     return { success: false, error: parsed.error.message }
   }
 
+  const amount = parsed.data.amount
+  if (amount < MIN_WITHDRAWAL_AMOUNT) {
+    return {
+      success: false,
+      error: `Minimum withdrawal is $${MIN_WITHDRAWAL_AMOUNT}`,
+    }
+  }
+
   try {
-    const withdrawal = await prisma.withdrawal.create({
-      data: {
-        userId: session.user.id,
-        amount: parsed.data.amount,
-        method: parsed.data.method,
-        accountInfo: parsed.data.accountInfo,
-        status: "PENDING",
-      },
+    const withdrawal = await prisma.$transaction(async (tx) => {
+      const debited = await tx.wallet.updateMany({
+        where: { userId: session.user.id, balance: { gte: amount } },
+        data: { balance: { decrement: amount } },
+      })
+      if (debited.count !== 1) {
+        throw new Error("INSUFFICIENT_FUNDS")
+      }
+
+      const wallet = await tx.wallet.findUniqueOrThrow({
+        where: { userId: session.user.id },
+      })
+
+      const row = await tx.withdrawal.create({
+        data: {
+          userId: session.user.id,
+          amount,
+          method: parsed.data.method,
+          accountInfo: parsed.data.accountInfo,
+          status: "PENDING",
+        },
+      })
+
+      await tx.transaction.create({
+        data: {
+          userId: session.user.id,
+          type: "WITHDRAWAL",
+          amount: -amount,
+          balanceAfter: Number(wallet.balance),
+          description: `Withdrawal request (${parsed.data.method})`,
+          referenceId: row.id,
+        },
+      })
+
+      return row
     })
 
     revalidatePath("/dashboard/withdrawals")
     revalidatePath("/wallet")
 
     return { success: true, data: { id: withdrawal.id } }
-  } catch {
-    return {
-      success: true,
-      data: { id: `wd_${Date.now()}` },
-      message: "Withdrawal requested (demo mode)",
+  } catch (error) {
+    if (error instanceof Error && error.message === "INSUFFICIENT_FUNDS") {
+      return { success: false, error: "Insufficient wallet balance" }
     }
+    console.error("[requestWithdrawalAction]", error)
+    return { success: false, error: "Withdrawal request failed" }
   }
 }

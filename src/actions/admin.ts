@@ -1,7 +1,7 @@
 "use server"
 
 import { revalidatePath } from "next/cache"
-import { getSession, requireRole } from "@/lib/session"
+import { requireRole } from "@/lib/session"
 import { prisma } from "@/server/db"
 import type { AdminOverview, ApiResponse } from "@/types"
 
@@ -48,19 +48,9 @@ export async function getAdminOverviewAction(): Promise<
         openReports,
       },
     }
-  } catch {
-    return {
-      success: true,
-      data: {
-        totalUsers: 1284,
-        totalTipsters: 86,
-        totalPredictions: 4210,
-        totalRevenue: 98420,
-        pendingWithdrawals: 7,
-        pendingVerifications: 3,
-        openReports: 2,
-      },
-    }
+  } catch (error) {
+    console.error("[getAdminOverviewAction]", error)
+    return { success: false, error: "Failed to load admin overview" }
   }
 }
 
@@ -87,14 +77,18 @@ export async function approveWithdrawalAction(
 ): Promise<ApiResponse> {
   try {
     await requireRole(["ADMIN"])
-    await prisma.withdrawal.update({
-      where: { id: withdrawalId },
+    const updated = await prisma.withdrawal.updateMany({
+      where: { id: withdrawalId, status: "PENDING" },
       data: { status: "APPROVED", processedAt: new Date() },
     })
+    if (!updated.count) {
+      return { success: false, error: "Withdrawal not found or already processed" }
+    }
     revalidatePath("/admin/withdrawals")
     return { success: true }
-  } catch {
-    return { success: true, message: "Approved (demo mode)" }
+  } catch (error) {
+    console.error("[approveWithdrawalAction]", error)
+    return { success: false, error: "Failed to approve withdrawal" }
   }
 }
 
@@ -115,8 +109,9 @@ export async function approveVerificationAction(
 
     revalidatePath("/admin/verifications")
     return { success: true }
-  } catch {
-    return { success: true, message: "Verified (demo mode)" }
+  } catch (error) {
+    console.error("[approveVerificationAction]", error)
+    return { success: false, error: "Failed to approve verification" }
   }
 }
 
@@ -132,25 +127,31 @@ export async function resolveReportAction(
     })
     revalidatePath("/admin/reports")
     return { success: true }
-  } catch {
-    return { success: true, message: "Report updated (demo mode)" }
+  } catch (error) {
+    console.error("[resolveReportAction]", error)
+    return { success: false, error: "Failed to update report" }
   }
 }
 
 export async function updatePlatformSettingsAction(
   settings: Record<string, string | number | boolean>
 ): Promise<ApiResponse> {
-  const session = await getSession()
-  if (!session?.user) {
-    return { success: false, error: "Unauthorized" }
-  }
-
   try {
     await requireRole(["ADMIN"])
-    console.info("[admin] updatePlatformSettings", settings)
+    // Persist allowlisted keys only
+    const allowed = ["commission_rate", "min_withdrawal", "maintenance_mode"] as const
+    for (const key of allowed) {
+      if (settings[key] === undefined) continue
+      await prisma.platformSetting.upsert({
+        where: { key },
+        create: { key, value: settings[key] as never },
+        update: { value: settings[key] as never },
+      })
+    }
     revalidatePath("/admin/settings")
     return { success: true, message: "Settings saved" }
-  } catch {
-    return { success: false, error: "Forbidden" }
+  } catch (error) {
+    console.error("[updatePlatformSettingsAction]", error)
+    return { success: false, error: "Forbidden or save failed" }
   }
 }

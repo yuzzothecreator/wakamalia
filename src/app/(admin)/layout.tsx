@@ -10,6 +10,7 @@ import {
   Settings,
 } from "lucide-react"
 import { Logo } from "@/components/shared/logo"
+import { requireAdminPage } from "@/lib/session"
 import { ROUTES } from "@/config/site"
 
 const adminNav = [
@@ -23,11 +24,13 @@ const adminNav = [
   { href: ROUTES.admin.settings, label: "Settings", icon: Settings },
 ]
 
-export default function AdminLayout({
+export default async function AdminLayout({
   children,
 }: {
   children: React.ReactNode
 }) {
+  await requireAdminPage()
+
   return (
     <div className="flex min-h-screen bg-background">
       <aside className="hidden w-56 shrink-0 border-r border-border bg-sidebar p-4 text-sidebar-foreground lg:block">

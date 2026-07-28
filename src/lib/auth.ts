@@ -21,12 +21,17 @@ export const auth = betterAuth({
     requireEmailVerification: false,
     minPasswordLength: 8,
     sendResetPassword: async ({ user, url }) => {
-      console.info(`[auth] Password reset for ${user.email}: ${url}`)
+      if (process.env.NODE_ENV !== "production") {
+        console.info(`[auth] Password reset for ${user.email}: ${url}`)
+      }
+      // TODO: send via email provider in production
     },
   },
   emailVerification: {
     sendVerificationEmail: async ({ user, url }) => {
-      console.info(`[auth] Verify email for ${user.email}: ${url}`)
+      if (process.env.NODE_ENV !== "production") {
+        console.info(`[auth] Verify email for ${user.email}: ${url}`)
+      }
     },
   },
   socialProviders: {
@@ -118,7 +123,9 @@ export const auth = betterAuth({
       otpLength: 6,
       expiresIn: 600,
       async sendVerificationOTP({ email, otp, type }) {
-        console.info(`[auth] OTP (${type}) for ${email}: ${otp}`)
+        if (process.env.NODE_ENV !== "production") {
+          console.info(`[auth] OTP (${type}) for ${email}: ${otp}`)
+        }
       },
     }),
   ],

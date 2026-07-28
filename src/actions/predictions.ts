@@ -5,7 +5,7 @@ import {
   predictionSchema,
   quickPredictionSchema,
 } from "@/lib/validations"
-import { getSession } from "@/lib/session"
+import { requireTipster } from "@/lib/session"
 import { prisma } from "@/server/db"
 import { savePredictionScreenshot } from "@/server/uploads"
 import type { ApiResponse } from "@/types"
@@ -16,8 +16,16 @@ type PredictionInput = z.infer<typeof predictionSchema>
 export async function createPredictionAction(
   input: PredictionInput
 ): Promise<ApiResponse<{ id: string }>> {
-  const session = await getSession()
-  if (!session?.user) {
+  let session
+  try {
+    session = await requireTipster()
+  } catch (error) {
+    if (error instanceof Error && error.message === "Account banned") {
+      return { success: false, error: "Account banned" }
+    }
+    if (error instanceof Error && error.message === "Forbidden") {
+      return { success: false, error: "Only tipsters can publish predictions" }
+    }
     return { success: false, error: "Unauthorized" }
   }
 
@@ -75,8 +83,16 @@ export async function createPredictionAction(
 export async function createQuickPredictionAction(
   formData: FormData
 ): Promise<ApiResponse<{ id: string }>> {
-  const session = await getSession()
-  if (!session?.user) {
+  let session
+  try {
+    session = await requireTipster()
+  } catch (error) {
+    if (error instanceof Error && error.message === "Account banned") {
+      return { success: false, error: "Account banned" }
+    }
+    if (error instanceof Error && error.message === "Forbidden") {
+      return { success: false, error: "Only tipsters can publish predictions" }
+    }
     return { success: false, error: "Unauthorized" }
   }
 
@@ -158,8 +174,10 @@ export async function createQuickPredictionAction(
 export async function deletePredictionAction(
   predictionId: string
 ): Promise<ApiResponse> {
-  const session = await getSession()
-  if (!session?.user) {
+  let session
+  try {
+    session = await requireTipster()
+  } catch {
     return { success: false, error: "Unauthorized" }
   }
 
@@ -177,8 +195,10 @@ export async function deletePredictionAction(
 export async function publishPredictionAction(
   predictionId: string
 ): Promise<ApiResponse> {
-  const session = await getSession()
-  if (!session?.user) {
+  let session
+  try {
+    session = await requireTipster()
+  } catch {
     return { success: false, error: "Unauthorized" }
   }
 
