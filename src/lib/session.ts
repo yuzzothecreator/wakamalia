@@ -2,6 +2,7 @@ import { headers } from "next/headers"
 import { redirect } from "next/navigation"
 import { auth } from "@/lib/auth"
 import { ROUTES } from "@/config/site"
+import { prisma } from "@/server/db"
 import type { Role } from "@/types"
 
 export async function getSession() {
@@ -22,9 +23,18 @@ export async function requireSession() {
   return session
 }
 
+export async function getDbUserRole(userId: string): Promise<Role> {
+  const user = await prisma.user.findUnique({
+    where: { id: userId },
+    select: { role: true },
+  })
+  return (user?.role as Role | undefined) ?? "SUBSCRIBER"
+}
+
 export async function requireRole(roles: Role[]) {
   const session = await requireSession()
-  const role = (session.user as { role?: Role }).role ?? "SUBSCRIBER"
+  // Prefer DB role so upgrades are not blocked by session cookie cache
+  const role = await getDbUserRole(session.user.id)
   if (role !== "ADMIN" && !roles.includes(role)) {
     throw new Error("Forbidden")
   }

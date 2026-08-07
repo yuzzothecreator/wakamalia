@@ -10,7 +10,7 @@ const footerLinks = {
     { href: "/features", label: "Features" },
   ],
   Creators: [
-    { href: ROUTES.register, label: "Become a Tipster" },
+    { href: ROUTES.dashboard.become, label: "Become a Tipster" },
     { href: ROUTES.dashboard.tipster, label: "Creator Dashboard" },
     { href: "/referral", label: "Referral Program" },
     { href: "/affiliates", label: "Affiliates" },

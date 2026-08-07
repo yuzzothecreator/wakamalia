@@ -59,6 +59,7 @@ export const ROUTES = {
   settings: "/settings",
   dashboard: {
     tipster: "/dashboard",
+    become: "/dashboard/become-tipster",
     create: "/dashboard/predictions/new",
     analytics: "/dashboard/analytics",
     subscribers: "/dashboard/subscribers",

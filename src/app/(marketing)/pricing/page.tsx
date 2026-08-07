@@ -50,7 +50,7 @@ const plans = [
       "M-Pesa, Stripe & bank payouts",
     ],
     cta: "Become a tipster",
-    href: ROUTES.register,
+    href: ROUTES.dashboard.become,
     highlighted: true,
   },
   {

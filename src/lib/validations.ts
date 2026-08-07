@@ -121,6 +121,16 @@ export const tipsterPricingSchema = z.object({
   monthlyPrice: z.coerce.number().min(0).max(10000),
 })
 
+export const becomeTipsterSchema = z.object({
+  bio: z.string().max(500).optional(),
+  country: z.string().max(56).optional(),
+  weeklyPrice: z.coerce.number().min(0).max(10000),
+  monthlyPrice: z.coerce.number().min(1).max(10000),
+  acceptTerms: z.boolean().refine((v) => v === true, {
+    message: "Accept the tipster terms to continue",
+  }),
+})
+
 export const commentSchema = z.object({
   content: z.string().min(1).max(1000),
   predictionId: z.string(),
@@ -188,4 +198,5 @@ export type RegisterInput = z.infer<typeof registerSchema>
 export type PredictionInput = z.infer<typeof predictionSchema>
 export type QuickPredictionInput = z.infer<typeof quickPredictionSchema>
 export type ProfileInput = z.infer<typeof profileSchema>
+export type BecomeTipsterInput = z.infer<typeof becomeTipsterSchema>
 export type SearchInput = z.infer<typeof searchSchema>

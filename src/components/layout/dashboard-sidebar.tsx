@@ -17,14 +17,16 @@ import {
   DollarSign,
   ArrowDownToLine,
   Shield,
+  Sparkles,
 } from "lucide-react"
 import { Logo } from "@/components/shared/logo"
 import { Button } from "@/components/ui/button"
 import { ROUTES } from "@/config/site"
 import { cn } from "@/lib/utils"
 import { useUIStore } from "@/store/ui-store"
+import type { Role } from "@/types"
 
-const mainNav = [
+const tipsterNav = [
   { href: ROUTES.dashboard.tipster, label: "Overview", icon: LayoutDashboard },
   { href: ROUTES.tips, label: "Today's tips", icon: Compass },
   { href: ROUTES.dashboard.create, label: "New prediction", icon: PlusCircle },
@@ -34,6 +36,12 @@ const mainNav = [
   { href: ROUTES.dashboard.withdrawals, label: "Withdrawals", icon: ArrowDownToLine },
 ]
 
+const subscriberNav = [
+  { href: ROUTES.dashboard.tipster, label: "Overview", icon: LayoutDashboard },
+  { href: ROUTES.tips, label: "Today's tips", icon: Compass },
+  { href: ROUTES.dashboard.become, label: "Become a tipster", icon: Sparkles },
+]
+
 const secondaryNav = [
   { href: ROUTES.wallet, label: "Wallet", icon: Wallet },
   { href: ROUTES.messages, label: "Messages", icon: MessageSquare },
@@ -41,10 +49,13 @@ const secondaryNav = [
   { href: ROUTES.settings, label: "Settings", icon: Settings },
 ]
 
-export function DashboardSidebar() {
+export function DashboardSidebar({ role = "SUBSCRIBER" }: { role?: Role }) {
   const pathname = usePathname()
   const { sidebarCollapsed, setSidebarCollapsed, sidebarOpen, setSidebarOpen } =
     useUIStore()
+
+  const isCreator = role === "TIPSTER" || role === "ADMIN"
+  const mainNav = isCreator ? tipsterNav : subscriberNav
 
   const NavLink = ({
     href,
@@ -124,7 +135,7 @@ export function DashboardSidebar() {
               sidebarCollapsed && "sr-only"
             )}
           >
-            Creator
+            {isCreator ? "Creator" : "Account"}
           </p>
           {mainNav.map((item) => (
             <NavLink key={item.href} {...item} />
@@ -138,22 +149,24 @@ export function DashboardSidebar() {
               sidebarCollapsed && "sr-only"
             )}
           >
-            Account
+            More
           </p>
           {secondaryNav.map((item) => (
             <NavLink key={item.href} {...item} />
           ))}
         </nav>
 
-        <div className="border-t border-white/10 p-3">
-          <Link
-            href={ROUTES.admin.root}
-            className="flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm text-teal-100/70 hover:bg-white/10 hover:text-white"
-          >
-            <Shield className="size-4" />
-            {!sidebarCollapsed && <span>Admin</span>}
-          </Link>
-        </div>
+        {role === "ADMIN" && (
+          <div className="border-t border-white/10 p-3">
+            <Link
+              href={ROUTES.admin.root}
+              className="flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm text-teal-100/70 hover:bg-white/10 hover:text-white"
+            >
+              <Shield className="size-4" />
+              {!sidebarCollapsed && <span>Admin</span>}
+            </Link>
+          </div>
+        )}
       </aside>
     </>
   )

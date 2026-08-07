@@ -127,7 +127,7 @@ export function LandingPage({
                 className="bg-accent text-accent-foreground hover:bg-accent/90"
                 asChild
               >
-                <Link href={ROUTES.register}>
+                <Link href={ROUTES.dashboard.become}>
                   Become a Tipster
                   <ArrowRight className="size-4" />
                 </Link>
